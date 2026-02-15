@@ -2,19 +2,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Volume2, Home as HomeIcon, BarChart3 } from "lucide-react";
+import { Volume2, Home as HomeIcon, BarChart3, LogOut, FileUp } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useQuiz } from "@/hooks/useQuiz";
 import { useSpeech } from "@/hooks/useSpeech";
 import { vocabularyBrother, vocabularyYounger, StudentType } from "@/data/vocabularyBoth";
 import Statistics from "./Statistics";
+import FileManager from "./FileManager";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
 
 export default function Home() {
-  const [, setLocation] = useLocation();
   const [studentType, setStudentType] = useState<StudentType | null>(null);
   const [showStats, setShowStats] = useState(false);
+  const [showFileManager, setShowFileManager] = useState(false);
+  const { user, logout } = useAuth();
 
   const questions = studentType === 'brother' ? vocabularyBrother : vocabularyYounger;
   const {
@@ -23,7 +26,6 @@ export default function Home() {
     results,
     isSubmitted,
     mistakeQuestions,
-    quizHistory,
     updateAnswer,
     handleSubmit,
     resetQuiz,
@@ -31,6 +33,13 @@ export default function Home() {
   } = useQuiz(questions, studentType);
 
   const { speak } = useSpeech();
+
+  // 首次進入時自動開始測驗
+  useEffect(() => {
+    if (studentType && questions.length > 0) {
+      startNewQuiz(10);
+    }
+  }, [studentType]);
 
   const getThemeColor = () => {
     if (studentType === 'brother') {
@@ -53,8 +62,31 @@ export default function Home() {
   };
 
   const theme = getThemeColor();
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
 
+  // 未登錄狀態
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-blue-800 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 max-w-2xl w-full text-center"
+        >
+          <h1 className="text-4xl font-bold text-pink-300 mb-4">Shane English</h1>
+          <p className="text-white mb-6">線上測驗系統</p>
+          <Button
+            onClick={() => window.location.href = getLoginUrl()}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 text-lg"
+          >
+            登入開始測驗
+          </Button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // 未選擇學生身份
   if (!studentType) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-blue-800 flex items-center justify-center p-4">
@@ -63,9 +95,20 @@ export default function Home() {
           animate={{ opacity: 1, scale: 1 }}
           className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 max-w-2xl w-full"
         >
-          <h1 className="text-4xl font-bold text-center text-pink-300 mb-2">Shane English</h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-4xl font-bold text-pink-300">Shane English</h1>
+            <Button
+              onClick={logout}
+              variant="ghost"
+              className="text-white hover:bg-white/20"
+              size="sm"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              登出
+            </Button>
+          </div>
           <p className="text-center text-white mb-2">線上測驗系統</p>
-          <p className="text-center text-purple-200 mb-8">請選擇您的身份入口：</p>
+          <p className="text-center text-purple-200 mb-8">歡迎 {user.name}! 請選擇您的身份入口：</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <motion.button
@@ -90,11 +133,42 @@ export default function Home() {
               <div className="text-sm font-normal text-cyan-100 mt-2">(Level A & B 題庫)</div>
             </motion.button>
           </div>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowFileManager(true)}
+            className="w-full mt-6 flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-lg transition-all"
+          >
+            <FileUp className="w-4 h-4" />
+            檔案管理
+          </motion.button>
         </motion.div>
       </div>
     );
   }
 
+  // 檔案管理頁面
+  if (showFileManager) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-blue-800 p-4">
+        <div className="max-w-4xl mx-auto">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowFileManager(false)}
+            className="mb-6 flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg transition-all"
+          >
+            <HomeIcon className="w-4 h-4" />
+            回首頁
+          </motion.button>
+          <FileManager />
+        </div>
+      </div>
+    );
+  }
+
+  // 統計頁面
   if (showStats) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-blue-800 p-4">
@@ -106,7 +180,7 @@ export default function Home() {
             className="mb-6 flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg transition-all"
           >
             <HomeIcon className="w-4 h-4" />
-            回首頁
+            回測驗
           </motion.button>
           <Statistics studentType={studentType} />
         </div>
@@ -114,29 +188,52 @@ export default function Home() {
     );
   }
 
+  // 測驗頁面
   return (
     <div className={`min-h-screen bg-gradient-to-br ${theme.bg} p-4`}>
       <div className="max-w-4xl mx-auto">
         {/* 頂部導航 */}
         <div className="flex items-center justify-between mb-6">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setStudentType(null)}
-            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all"
-          >
-            <HomeIcon className="w-4 h-4" />
-            回首頁
-          </motion.button>
+          <div className="flex items-center gap-3">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setStudentType(null)}
+              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all"
+            >
+              <HomeIcon className="w-4 h-4" />
+              選擇身份
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowStats(true)}
+              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all"
+            >
+              <BarChart3 className="w-4 h-4" />
+              統計
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowFileManager(true)}
+              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all"
+            >
+              <FileUp className="w-4 h-4" />
+              檔案
+            </motion.button>
+          </div>
 
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setShowStats(true)}
+            onClick={logout}
             className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all"
           >
-            <BarChart3 className="w-4 h-4" />
-            統計
+            <LogOut className="w-4 h-4" />
+            登出
           </motion.button>
         </div>
 
