@@ -275,7 +275,7 @@ export default function Home() {
                                 value={answers.get(index) || ''}
                                 onChange={(e) => updateAnswer(index, e.target.value)}
                                 disabled={isSubmitted}
-                                className={`text-lg h-12 ${showResult ? (isCorrect ? 'border-green-500 bg-green-500/5' : 'border-red-500 bg-red-500/5 line-through') : 'neon-border'}`}
+                                className={`text-2xl h-16 font-semibold ${showResult ? (isCorrect ? 'border-green-500 bg-green-500/5' : 'border-red-500 bg-red-500/5 line-through') : 'neon-border'}`}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') {
                                     const nextInput = document.querySelector(`input[data-index="${index + 1}"]`) as HTMLInputElement;
