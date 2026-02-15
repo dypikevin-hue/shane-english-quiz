@@ -275,7 +275,7 @@ export default function Home() {
                                 value={answers.get(index) || ''}
                                 onChange={(e) => updateAnswer(index, e.target.value)}
                                 disabled={isSubmitted}
-                                className={`text-2xl h-16 font-semibold ${showResult ? (isCorrect ? 'border-green-500 bg-green-500/5' : 'border-red-500 bg-red-500/5 line-through') : 'neon-border'}`}
+                                className={`text-4xl h-24 font-bold ${showResult ? (isCorrect ? 'border-green-500 bg-green-500/5' : 'border-red-500 bg-red-500/5 line-through') : 'neon-border'}`}
                                 autoComplete="off"
                                 autoCorrect="off"
                                 autoCapitalize="off"
