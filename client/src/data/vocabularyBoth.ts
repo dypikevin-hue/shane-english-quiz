@@ -30,7 +30,7 @@ export const vocabularyBrother = [
   {e:"pack away", c:"收拾東西"}, {e:"beetle", c:"甲蟲"}, {e:"camel", c:"駱駝"}, {e:"eagle", c:"老鷹"}, {e:"tunnel", c:"隧道"}
 ];
 
-// 弟弟題庫 (Level A & B)
+// 弟弟題庫 (Level A & B) - 帶注音符號
 export const vocabularyYounger = [
   {e:"apple",c:"蘋果"}, {e:"ant",c:"螞蟻"},
   {e:"bag",c:"袋子"}, {e:"ball",c:"球"},
