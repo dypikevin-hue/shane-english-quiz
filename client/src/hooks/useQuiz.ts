@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { VocabularyItem } from '@/data/vocabulary';
+import { VocabularyItem } from '@/data/vocabularyBoth';
 
 export interface QuizAnswer {
   questionIndex: number;
@@ -42,7 +42,7 @@ function shuffle<T>(arr: T[]): T[] {
   return newArr;
 }
 
-export function useQuiz() {
+export function useQuiz(allQuestions: VocabularyItem[], studentType: 'brother' | 'younger' | null) {
   const [questions, setQuestions] = useState<VocabularyItem[]>([]);
   const [answers, setAnswers] = useState<Map<number, string>>(new Map());
   const [results, setResults] = useState<QuizAnswer[]>([]);
@@ -52,11 +52,20 @@ export function useQuiz() {
   const [mistakes, setMistakes] = useState<VocabularyItem[]>([]);
   const [history, setHistory] = useState<QuizHistory[]>([]);
 
+  // 根據學生類型生成 key
+  const getStorageKey = (baseKey: string) => {
+    if (!studentType) return baseKey;
+    return `${baseKey}_${studentType}`;
+  };
+
+  const mistakesKey = getStorageKey(MISTAKES_KEY);
+  const historyKey = getStorageKey(HISTORY_KEY);
+
   // 載入錯題本和歷史記錄
   useEffect(() => {
-    setMistakes(safeGetArray<VocabularyItem>(MISTAKES_KEY));
-    setHistory(safeGetArray<QuizHistory>(HISTORY_KEY));
-  }, []);
+    setMistakes(safeGetArray<VocabularyItem>(mistakesKey));
+    setHistory(safeGetArray<QuizHistory>(historyKey));
+  }, [studentType]);
 
   // 計時器
   useEffect(() => {
@@ -66,7 +75,6 @@ export function useQuiz() {
       setTimeLeft(prev => {
         if (prev <= 1) {
           setIsRunning(false);
-          handleSubmit();
           return 0;
         }
         return prev - 1;
@@ -77,8 +85,8 @@ export function useQuiz() {
   }, [isRunning, timeLeft]);
 
   // 開始測驗
-  const startQuiz = useCallback((allQuestions: VocabularyItem[], count: number) => {
-    const mistakesFromStorage = safeGetArray<VocabularyItem>(MISTAKES_KEY);
+  const startNewQuiz = useCallback((count: number = 10) => {
+    const mistakesFromStorage = safeGetArray<VocabularyItem>(mistakesKey);
     
     // 優先從錯題本抽題
     const shuffledMistakes = shuffle(mistakesFromStorage);
@@ -105,7 +113,7 @@ export function useQuiz() {
     const timeInSeconds = count === 10 ? 900 : count === 20 ? 1800 : count * 90;
     setTimeLeft(timeInSeconds);
     setIsRunning(true);
-  }, []);
+  }, [allQuestions, mistakesKey]);
 
   // 更新答案
   const updateAnswer = useCallback((questionIndex: number, answer: string) => {
@@ -114,11 +122,11 @@ export function useQuiz() {
 
   // 交卷
   const handleSubmit = useCallback(() => {
-    if (isSubmitted) return;
+    if (isSubmitted || questions.length === 0) return;
     
     setIsRunning(false);
     const quizResults: QuizAnswer[] = [];
-    const currentMistakes = safeGetArray<VocabularyItem>(MISTAKES_KEY);
+    const currentMistakes = safeGetArray<VocabularyItem>(mistakesKey);
     const newMistakes = [...currentMistakes];
     
     questions.forEach((q, index) => {
@@ -143,7 +151,7 @@ export function useQuiz() {
       }
     });
     
-    localStorage.setItem(MISTAKES_KEY, JSON.stringify(newMistakes));
+    localStorage.setItem(mistakesKey, JSON.stringify(newMistakes));
     setMistakes(newMistakes);
     setResults(quizResults);
     setIsSubmitted(true);
@@ -152,7 +160,7 @@ export function useQuiz() {
     const correctCount = quizResults.filter(r => r.isCorrect).length;
     const score = Math.round((correctCount / questions.length) * 100);
     saveHistory(score, questions.length);
-  }, [questions, answers, isSubmitted]);
+  }, [questions, answers, isSubmitted, mistakesKey]);
 
   // 儲存歷史記錄
   const saveHistory = useCallback((score: number, total: number) => {
@@ -160,24 +168,29 @@ export function useQuiz() {
     const timeStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     
     const record: QuizHistory = { time: timeStr, score, total };
-    const currentHistory = safeGetArray<QuizHistory>(HISTORY_KEY);
+    const currentHistory = safeGetArray<QuizHistory>(historyKey);
     const newHistory = [record, ...currentHistory].slice(0, 20);
     
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+    localStorage.setItem(historyKey, JSON.stringify(newHistory));
     setHistory(newHistory);
-  }, []);
+  }, [historyKey]);
 
   // 清除歷史記錄
   const clearHistory = useCallback(() => {
-    localStorage.removeItem(HISTORY_KEY);
+    localStorage.removeItem(historyKey);
     setHistory([]);
-  }, []);
+  }, [historyKey]);
 
   // 清空錯題本
   const clearMistakes = useCallback(() => {
-    localStorage.removeItem(MISTAKES_KEY);
+    localStorage.removeItem(mistakesKey);
     setMistakes([]);
-  }, []);
+  }, [mistakesKey]);
+
+  // 重置測驗
+  const resetQuiz = useCallback(() => {
+    startNewQuiz(10);
+  }, [startNewQuiz]);
 
   return {
     questions,
@@ -188,9 +201,13 @@ export function useQuiz() {
     isRunning,
     mistakes,
     history,
-    startQuiz,
+    currentQuestionIndex: questions.length > 0 ? Math.min(Object.keys(answers).length, questions.length - 1) : 0,
+    mistakeQuestions: mistakes,
+    quizHistory: history,
+    startNewQuiz,
     updateAnswer,
     handleSubmit,
+    resetQuiz,
     clearHistory,
     clearMistakes
   };

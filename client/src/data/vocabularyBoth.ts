@@ -1,5 +1,11 @@
+// VocabularyItem 類型定義
+export type VocabularyItem = {
+  e: string;
+  c: string;
+};
+
 // 哥哥題庫 (TEP 09)
-export const vocabularyBrother = [
+export const vocabularyBrother: VocabularyItem[] = [
   {e:"funfair", c:"遊樂園 (英式)"}, {e:"carnival", c:"遊樂園 (美式)"}, {e:"circus", c:"馬戲團"}, {e:"theatre", c:"劇院 (英式)"}, {e:"theater", c:"劇院 (美式)"},
   {e:"gallery", c:"畫廊"}, {e:"raft", c:"橡皮艇"}, {e:"act", c:"演出"}, {e:"bookshop", c:"書店"}, {e:"sports shop", c:"運動用品店"},
   {e:"with", c:"和...一起"}, {e:"there", c:"在那裡"}, {e:"She went there with Bob and Dan.", c:"她和Bob跟Dan一起去了那裡。"}, {e:"They went there with Felix.", c:"他們和Felix一起去了那裡。"},
@@ -31,7 +37,7 @@ export const vocabularyBrother = [
 ];
 
 // 弟弟題庫 (Level A & B) - 帶注音符號
-export const vocabularyYounger = [
+export const vocabularyYounger: VocabularyItem[] = [
   {e:"apple",c:"<ruby>蘋<rt>ㄆㄧㄥˊ</rt></ruby><ruby>果<rt>ㄍㄨㄛˇ</rt></ruby>"}, {e:"ant",c:"<ruby>螞<rt>ㄇㄚˇ</rt></ruby><ruby>蟻<rt>ㄧˇ</rt></ruby>"},
   {e:"bag",c:"<ruby>袋<rt>ㄉㄞˋ</rt></ruby><ruby>子<rt>ㄗ˙</rt></ruby>"}, {e:"ball",c:"<ruby>球<rt>ㄑㄧㄡˊ</rt></ruby>"},
   {e:"banana",c:"<ruby>香<rt>ㄒㄧㄤ</rt></ruby><ruby>蕉<rt>ㄐㄧㄠ</rt></ruby>"}, {e:"bear",c:"<ruby>熊<rt>ㄒㄩㄥˊ</rt></ruby>"},

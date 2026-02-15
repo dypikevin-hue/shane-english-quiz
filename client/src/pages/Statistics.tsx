@@ -18,13 +18,20 @@ const MISTAKES_KEY = "shane_english_mistakes";
 
 const COLORS = ['#10b981', '#fbbf24', '#f43f5e', '#7c3aed'];
 
-export default function Statistics() {
+interface StatisticsProps {
+  studentType: 'brother' | 'younger';
+}
+
+export default function Statistics({ studentType }: StatisticsProps) {
   const [history, setHistory] = useState<QuizHistory[]>([]);
   const [mistakeCount, setMistakeCount] = useState(0);
 
   useEffect(() => {
     try {
-      const historyStr = localStorage.getItem(HISTORY_KEY);
+      const historyKey = studentType === 'brother' ? `${HISTORY_KEY}_brother` : `${HISTORY_KEY}_younger`;
+      const mistakesKey = studentType === 'brother' ? `${MISTAKES_KEY}_brother` : `${MISTAKES_KEY}_younger`;
+      
+      const historyStr = localStorage.getItem(historyKey);
       if (historyStr) {
         const data = JSON.parse(historyStr);
         if (Array.isArray(data)) {
