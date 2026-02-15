@@ -271,7 +271,7 @@ export default function Home() {
                           </Button>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div>
                           <Input
                             placeholder="輸入英文"
                             value={answers.get(index) || ''}
@@ -300,12 +300,12 @@ export default function Home() {
                           />
 
                           {showResult && !isCorrect && (
-                            <span className="font-bold whitespace-nowrap" style={{
+                            <div className="mt-2 font-bold" style={{
                               fontSize: '26px',
                               color: '#d32f2f'
                             }}>
                               ✓ {q.e}
-                            </span>
+                            </div>
                           )}
                         </div>
 
