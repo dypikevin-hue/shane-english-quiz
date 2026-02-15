@@ -19,6 +19,7 @@ export default function Home() {
   const [showFileManager, setShowFileManager] = useState(false);
   const [showQuestionCount, setShowQuestionCount] = useState(false);
   const [selectedCount, setSelectedCount] = useState<number | null>(null);
+  const [quizStarted, setQuizStarted] = useState(false);
   const { user, logout } = useAuth();
 
   const questions = studentType === 'brother' ? vocabularyBrother : vocabularyYounger;
@@ -63,7 +64,14 @@ export default function Home() {
   const handleStartQuiz = (count: number) => {
     setSelectedCount(count);
     setShowQuestionCount(false);
+    setQuizStarted(true);
     startNewQuiz(count);
+  };
+
+  // 選擇學生身份後顯示題數選單
+  const handleSelectStudent = (type: StudentType) => {
+    setStudentType(type);
+    setShowQuestionCount(true);
   };
 
   // 未登錄狀態
@@ -116,7 +124,7 @@ export default function Home() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setStudentType('brother')}
+              onClick={() => handleSelectStudent('brother')}
               className="bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl p-8 text-white font-bold text-2xl shadow-lg hover:shadow-xl transition-all"
             >
               <div className="text-5xl mb-2">👦</div>
@@ -127,7 +135,7 @@ export default function Home() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setStudentType('younger')}
+              onClick={() => handleSelectStudent('younger')}
               className="bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl p-8 text-white font-bold text-2xl shadow-lg hover:shadow-xl transition-all"
             >
               <div className="text-5xl mb-2">👦</div>
