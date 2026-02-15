@@ -17,6 +17,8 @@ export default function Home() {
   const [studentType, setStudentType] = useState<StudentType | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [showFileManager, setShowFileManager] = useState(false);
+  const [showQuestionCount, setShowQuestionCount] = useState(false);
+  const [selectedCount, setSelectedCount] = useState<number | null>(null);
   const { user, logout } = useAuth();
 
   const questions = studentType === 'brother' ? vocabularyBrother : vocabularyYounger;
@@ -30,16 +32,10 @@ export default function Home() {
     handleSubmit,
     resetQuiz,
     startNewQuiz,
+    timeLeft,
   } = useQuiz(questions, studentType);
 
   const { speak } = useSpeech();
-
-  // 首次進入時自動開始測驗
-  useEffect(() => {
-    if (studentType && questions.length > 0) {
-      startNewQuiz(10);
-    }
-  }, [studentType]);
 
   const getThemeColor = () => {
     if (studentType === 'brother') {
@@ -63,6 +59,12 @@ export default function Home() {
 
   const theme = getThemeColor();
   const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
+
+  const handleStartQuiz = (count: number) => {
+    setSelectedCount(count);
+    setShowQuestionCount(false);
+    startNewQuiz(count);
+  };
 
   // 未登錄狀態
   if (!user) {
@@ -128,7 +130,7 @@ export default function Home() {
               onClick={() => setStudentType('younger')}
               className="bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl p-8 text-white font-bold text-2xl shadow-lg hover:shadow-xl transition-all"
             >
-              <div className="text-5xl mb-2">👧</div>
+              <div className="text-5xl mb-2">👦</div>
               <div>一年級弟弟專區</div>
               <div className="text-sm font-normal text-cyan-100 mt-2">(Level A & B 題庫)</div>
             </motion.button>
@@ -188,6 +190,50 @@ export default function Home() {
     );
   }
 
+  // 題數選擇頁面
+  if (showQuestionCount) {
+    return (
+      <div className={`min-h-screen bg-gradient-to-br ${theme.bg} flex items-center justify-center p-4`}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20 max-w-md w-full text-center"
+        >
+          <h2 className="text-3xl font-bold text-white mb-8">選擇測驗題數</h2>
+          
+          <div className="space-y-4">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleStartQuiz(10)}
+              className="w-full bg-white/20 hover:bg-white/30 text-white px-6 py-4 rounded-lg font-bold text-xl transition-all"
+            >
+              10 題 (約 15 分鐘)
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleStartQuiz(20)}
+              className="w-full bg-white/20 hover:bg-white/30 text-white px-6 py-4 rounded-lg font-bold text-xl transition-all"
+            >
+              20 題 (約 30 分鐘)
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowQuestionCount(false)}
+              className="w-full bg-red-500/20 hover:bg-red-500/30 text-white px-6 py-3 rounded-lg font-bold transition-all"
+            >
+              取消
+            </motion.button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   // 測驗頁面
   return (
     <div className={`min-h-screen bg-gradient-to-br ${theme.bg} p-4`}>
@@ -239,23 +285,30 @@ export default function Home() {
 
         {/* 題目卡片容器 */}
         <div className="space-y-4">
-          {/* 進度條 */}
+          {/* 進度條和計時 */}
           <Card className="bg-white/10 backdrop-blur border-white/20">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-white font-bold">
-                  第 {currentQuestionIndex + 1} / {questions.length} 題
+                  第 {currentQuestionIndex + 1} / {selectedCount || questions.length} 題
                 </span>
-                <span className="text-white/80 text-sm">
-                  {mistakeQuestions.length > 0 && `錯題本: ${mistakeQuestions.length} 題`}
-                </span>
+                <div className="flex items-center gap-4">
+                  {timeLeft > 0 && (
+                    <span className={`font-bold ${timeLeft < 60 ? 'text-red-300' : 'text-white'}`}>
+                      時間: {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+                    </span>
+                  )}
+                  <span className="text-white/80 text-sm">
+                    {mistakeQuestions.length > 0 && `錯題本: ${mistakeQuestions.length} 題`}
+                  </span>
+                </div>
               </div>
               <Progress value={progress} className="h-3" />
             </CardContent>
           </Card>
 
           {/* 題目卡片 */}
-          {questions.map((q, index) => {
+          {questions.slice(0, selectedCount || questions.length).map((q, index) => {
             const isCorrect = results[index]?.isCorrect;
             const showResult = results[index] !== undefined;
 
@@ -271,7 +324,7 @@ export default function Home() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <span 
-                          className="text-purple-300 font-bold text-lg"
+                          className="text-black font-bold text-lg"
                           dangerouslySetInnerHTML={{
                             __html: `${index + 1}. ${q.c}`
                           }}
@@ -357,7 +410,7 @@ export default function Home() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={resetQuiz}
+              onClick={() => setShowQuestionCount(true)}
               className={`w-full py-4 rounded-lg font-bold text-lg transition-all ${theme.btnSecondary} text-white`}
             >
               重新測驗
