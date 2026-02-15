@@ -275,7 +275,15 @@ export default function Home() {
                                 value={answers.get(index) || ''}
                                 onChange={(e) => updateAnswer(index, e.target.value)}
                                 disabled={isSubmitted}
-                                className={`text-4xl h-24 font-bold ${showResult ? (isCorrect ? 'border-green-500 bg-green-500/5' : 'border-red-500 bg-red-500/5 line-through') : 'neon-border'}`}
+                                className={`font-bold ${showResult ? (isCorrect ? 'border-green-500 bg-green-500/5' : 'border-red-500 bg-red-500/5 line-through') : 'neon-border'}`}
+                                style={{
+                                  fontSize: '28px',
+                                  padding: '12px 15px',
+                                  height: 'auto',
+                                  minHeight: '50px',
+                                  color: '#1565c0',
+                                  lineHeight: '1.5'
+                                }}
                                 autoComplete="off"
                                 autoCorrect="off"
                                 autoCapitalize="off"
@@ -290,7 +298,10 @@ export default function Home() {
                               />
                               
                               {showResult && !isCorrect && (
-                                <span className="text-red-400 font-bold whitespace-nowrap">
+                                <span className="font-bold whitespace-nowrap" style={{
+                                  fontSize: '26px',
+                                  color: '#d32f2f'
+                                }}>
                                   ✓ {q.e}
                                 </span>
                               )}
