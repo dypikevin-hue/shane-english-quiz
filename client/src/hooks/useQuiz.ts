@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { VocabularyItem } from '@/data/vocabularyBoth';
 
 export interface QuizAnswer {
@@ -42,6 +42,11 @@ function shuffle<T>(arr: T[]): T[] {
   return newArr;
 }
 
+// 判斷是否為句子
+function isSentence(text: string): boolean {
+  return text.includes(' ') || text.includes('?') || text.includes('。');
+}
+
 export function useQuiz(allQuestions: VocabularyItem[], studentType: 'brother' | 'younger' | null) {
   const [questions, setQuestions] = useState<VocabularyItem[]>([]);
   const [answers, setAnswers] = useState<Map<number, string>>(new Map());
@@ -51,6 +56,7 @@ export function useQuiz(allQuestions: VocabularyItem[], studentType: 'brother' |
   const [isRunning, setIsRunning] = useState(false);
   const [mistakes, setMistakes] = useState<VocabularyItem[]>([]);
   const [history, setHistory] = useState<QuizHistory[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   // 根據學生類型生成 key
   const getStorageKey = (baseKey: string) => {
@@ -65,7 +71,7 @@ export function useQuiz(allQuestions: VocabularyItem[], studentType: 'brother' |
   useEffect(() => {
     setMistakes(safeGetArray<VocabularyItem>(mistakesKey));
     setHistory(safeGetArray<QuizHistory>(historyKey));
-  }, [studentType]);
+  }, [studentType, mistakesKey, historyKey]);
 
   // 計時器
   useEffect(() => {
@@ -84,131 +90,147 @@ export function useQuiz(allQuestions: VocabularyItem[], studentType: 'brother' |
     return () => clearInterval(timer);
   }, [isRunning, timeLeft]);
 
-  // 開始測驗
+  // 開始測驗 - 隨機出題,哥哥題目包含句子比例
   const startNewQuiz = useCallback((count: number = 10) => {
-    const mistakesFromStorage = safeGetArray<VocabularyItem>(mistakesKey);
-    
-    // 優先從錯題本抽題
-    const shuffledMistakes = shuffle(mistakesFromStorage);
-    const mistakesToUse = shuffledMistakes.slice(0, count);
-    
-    let selected = [...mistakesToUse];
-    const needed = count - selected.length;
-    
-    if (needed > 0) {
-      const remaining = allQuestions.filter(q => 
-        !selected.some(s => s.e === q.e)
-      );
-      const shuffledRemaining = shuffle(remaining);
-      selected = [...selected, ...shuffledRemaining.slice(0, needed)];
+    let selected: VocabularyItem[] = [];
+
+    if (studentType === 'brother') {
+      // 哥哥: 10題含2題句子,20題含3-4題句子
+      const sentenceCount = count === 10 ? 2 : count === 20 ? 3 + Math.floor(Math.random() * 2) : 0;
+      
+      // 分離句子和單字
+      const sentences = allQuestions.filter(q => isSentence(q.e));
+      const words = allQuestions.filter(q => !isSentence(q.e));
+      
+      // 隨機選擇句子
+      const shuffledSentences = shuffle(sentences);
+      const selectedSentences = shuffledSentences.slice(0, Math.min(sentenceCount, sentences.length));
+      
+      // 隨機選擇單字填補剩餘
+      const needed = count - selectedSentences.length;
+      const shuffledWords = shuffle(words);
+      const selectedWords = shuffledWords.slice(0, needed);
+      
+      selected = [...selectedSentences, ...selectedWords];
+    } else {
+      // 弟弟: 純隨機出題
+      const shuffled = shuffle(allQuestions);
+      selected = shuffled.slice(0, count);
     }
+
+    // 最後再洗牌一次
+    selected = shuffle(selected);
     
-    const finalQuestions = shuffle(selected);
-    setQuestions(finalQuestions);
+    setQuestions(selected);
+    setCurrentQuestionIndex(0);
     setAnswers(new Map());
     setResults([]);
     setIsSubmitted(false);
-    
-    // 設定時間
+
+    // 設置計時
     const timeInSeconds = count === 10 ? 900 : count === 20 ? 1800 : count * 90;
     setTimeLeft(timeInSeconds);
     setIsRunning(true);
-  }, [allQuestions, mistakesKey]);
+  }, [allQuestions, studentType]);
 
   // 更新答案
   const updateAnswer = useCallback((questionIndex: number, answer: string) => {
-    setAnswers(prev => new Map(prev).set(questionIndex, answer));
+    setAnswers(prev => {
+      const newAnswers = new Map(prev);
+      newAnswers.set(questionIndex, answer);
+      return newAnswers;
+    });
   }, []);
 
-  // 交卷
+  // 驗證答案
+  const validateAnswer = (userInput: string, correctWord: string): boolean => {
+    const normalize = (word: string) => 
+      word.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+    
+    return normalize(userInput) === normalize(correctWord) && userInput.trim() !== '';
+  };
+
+  // 提交測驗
   const handleSubmit = useCallback(() => {
-    if (isSubmitted || questions.length === 0) return;
-    
-    setIsRunning(false);
-    const quizResults: QuizAnswer[] = [];
-    const currentMistakes = safeGetArray<VocabularyItem>(mistakesKey);
-    const newMistakes = [...currentMistakes];
-    
-    questions.forEach((q, index) => {
-      const userAnswer = (answers.get(index) || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const correctAnswer = q.e.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const isCorrect = userAnswer === correctAnswer && userAnswer !== '';
-      
-      quizResults.push({
-        questionIndex: index,
-        userAnswer: answers.get(index) || '',
-        isCorrect
-      });
-      
-      const mistakeIndex = newMistakes.findIndex(m => m.e === q.e);
-      
-      if (isCorrect && mistakeIndex > -1) {
-        // 答對了,從錯題本移除
-        newMistakes.splice(mistakeIndex, 1);
-      } else if (!isCorrect && mistakeIndex === -1) {
-        // 答錯了,加入錯題本
-        newMistakes.push(q);
+    if (questions.length === 0) return;
+
+    const newResults: QuizAnswer[] = questions.map((q, idx) => {
+      const userAnswer = answers.get(idx) || '';
+      const isCorrect = validateAnswer(userAnswer, q.e);
+
+      // 更新錯題本
+      if (!isCorrect) {
+        const mistakesFromStorage = safeGetArray<VocabularyItem>(mistakesKey);
+        if (!mistakesFromStorage.find(m => m.e === q.e)) {
+          mistakesFromStorage.push(q);
+          localStorage.setItem(mistakesKey, JSON.stringify(mistakesFromStorage));
+        }
+      } else {
+        // 如果答對,從錯題本移除
+        const mistakesFromStorage = safeGetArray<VocabularyItem>(mistakesKey);
+        const filtered = mistakesFromStorage.filter(m => m.e !== q.e);
+        localStorage.setItem(mistakesKey, JSON.stringify(filtered));
       }
+
+      return {
+        questionIndex: idx,
+        userAnswer,
+        isCorrect,
+      };
     });
-    
-    localStorage.setItem(mistakesKey, JSON.stringify(newMistakes));
-    setMistakes(newMistakes);
-    setResults(quizResults);
+
+    setResults(newResults);
     setIsSubmitted(true);
-    
-    // 儲存成績
-    const correctCount = quizResults.filter(r => r.isCorrect).length;
-    const score = Math.round((correctCount / questions.length) * 100);
-    saveHistory(score, questions.length);
-  }, [questions, answers, isSubmitted, mistakesKey]);
+    setIsRunning(false);
 
-  // 儲存歷史記錄
-  const saveHistory = useCallback((score: number, total: number) => {
-    const now = new Date();
-    const timeStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    
-    const record: QuizHistory = { time: timeStr, score, total };
-    const currentHistory = safeGetArray<QuizHistory>(historyKey);
-    const newHistory = [record, ...currentHistory].slice(0, 20);
-    
-    localStorage.setItem(historyKey, JSON.stringify(newHistory));
-    setHistory(newHistory);
-  }, [historyKey]);
-
-  // 清除歷史記錄
-  const clearHistory = useCallback(() => {
-    localStorage.removeItem(historyKey);
-    setHistory([]);
-  }, [historyKey]);
-
-  // 清空錯題本
-  const clearMistakes = useCallback(() => {
-    localStorage.removeItem(mistakesKey);
-    setMistakes([]);
-  }, [mistakesKey]);
+    // 保存歷史記錄
+    const correctCount = newResults.filter(r => r.isCorrect).length;
+    const historyFromStorage = safeGetArray<QuizHistory>(historyKey);
+    const newHistory: QuizHistory = {
+      time: new Date().toLocaleString('zh-TW'),
+      score: correctCount,
+      total: questions.length,
+    };
+    historyFromStorage.unshift(newHistory);
+    // 只保留最近50筆
+    if (historyFromStorage.length > 50) {
+      historyFromStorage.pop();
+    }
+    localStorage.setItem(historyKey, JSON.stringify(historyFromStorage));
+    setHistory(historyFromStorage);
+  }, [questions, answers, mistakesKey, historyKey]);
 
   // 重置測驗
   const resetQuiz = useCallback(() => {
-    startNewQuiz(10);
-  }, [startNewQuiz]);
+    setQuestions([]);
+    setAnswers(new Map());
+    setResults([]);
+    setIsSubmitted(false);
+    setTimeLeft(0);
+    setIsRunning(false);
+    setCurrentQuestionIndex(0);
+  }, []);
+
+  // 下一題
+  const nextQuestion = useCallback(() => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    }
+  }, [currentQuestionIndex, questions.length]);
 
   return {
     questions,
+    currentQuestionIndex,
     answers,
     results,
     isSubmitted,
-    timeLeft,
-    isRunning,
-    mistakes,
-    history,
-    currentQuestionIndex: questions.length > 0 ? Math.min(Object.keys(answers).length, questions.length - 1) : 0,
     mistakeQuestions: mistakes,
-    quizHistory: history,
-    startNewQuiz,
     updateAnswer,
     handleSubmit,
     resetQuiz,
-    clearHistory,
-    clearMistakes
+    startNewQuiz,
+    timeLeft,
+    history,
+    nextQuestion,
   };
 }

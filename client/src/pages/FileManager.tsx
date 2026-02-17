@@ -7,7 +7,11 @@ import { Upload, Trash2, Download, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
-export default function FileManager() {
+interface FileManagerProps {
+  studentType?: string;
+}
+
+export default function FileManager({ studentType }: FileManagerProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [description, setDescription] = useState("");
   const [uploading, setUploading] = useState(false);
