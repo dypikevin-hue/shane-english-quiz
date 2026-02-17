@@ -24,7 +24,6 @@ export default function Home() {
   const [studentType, setStudentType] = useState<StudentType | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [showFileManager, setShowFileManager] = useState(false);
-  const [showQuestionCount, setShowQuestionCount] = useState(false);
   const [selectedCount, setSelectedCount] = useState<number | null>(null);
   const [quizMode, setQuizMode] = useState<'normal' | 'mistakes' | null>(null);
   const [showHistory, setShowHistory] = useState(false);
@@ -137,7 +136,6 @@ export default function Home() {
               whileTap={{ scale: 0.95 }}
               onClick={() => {
                 setStudentType('brother');
-                setShowQuestionCount(true);
               }}
               className="bg-gradient-to-br from-green-400 to-emerald-600 rounded-2xl p-8 text-white hover:shadow-2xl transition-all"
             >
@@ -151,7 +149,6 @@ export default function Home() {
               whileTap={{ scale: 0.95 }}
               onClick={() => {
                 setStudentType('younger');
-                setShowQuestionCount(true);
               }}
               className="bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl p-8 text-white hover:shadow-2xl transition-all"
             >
@@ -218,8 +215,8 @@ export default function Home() {
     );
   }
 
-  // 選擇題數
-  if (showQuestionCount && !quizMode) {
+  // 選擇測驗模式
+  if (studentType && selectedCount === null) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-blue-800 flex items-center justify-center p-4">
         <motion.div
@@ -235,7 +232,6 @@ export default function Home() {
               whileTap={{ scale: 0.95 }}
               onClick={() => {
                 setQuizMode('normal');
-                setShowQuestionCount(false);
               }}
               className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-4 rounded-lg transition-all font-bold text-lg"
             >
@@ -248,7 +244,6 @@ export default function Home() {
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   setQuizMode('mistakes');
-                  setShowQuestionCount(false);
                 }}
                 className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 py-4 rounded-lg transition-all font-bold text-lg"
               >
@@ -271,7 +266,7 @@ export default function Home() {
   }
 
   // 選擇題數
-  if (showQuestionCount && quizMode && selectedCount === null) {
+  if (studentType && quizMode && selectedCount === null) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-blue-800 flex items-center justify-center p-4">
         <motion.div
@@ -288,7 +283,6 @@ export default function Home() {
               onClick={() => {
                 setSelectedCount(10);
                 startNewQuiz(10);
-                setShowQuestionCount(false);
               }}
               className="bg-gradient-to-br from-green-400 to-emerald-600 text-white px-6 py-6 rounded-lg transition-all font-bold text-2xl hover:shadow-2xl"
             >
@@ -301,7 +295,6 @@ export default function Home() {
               onClick={() => {
                 setSelectedCount(20);
                 startNewQuiz(20);
-                setShowQuestionCount(false);
               }}
               className="bg-gradient-to-br from-blue-400 to-blue-600 text-white px-6 py-6 rounded-lg transition-all font-bold text-2xl hover:shadow-2xl"
             >
@@ -313,7 +306,6 @@ export default function Home() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
-              setShowQuestionCount(false);
               setQuizMode(null);
             }}
             className="w-full bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-lg transition-all"
@@ -327,9 +319,6 @@ export default function Home() {
 
   // 測驗進行中
   if (questions.length > 0 && !isSubmitted && selectedCount) {
-    const setCurrentQuestionIndex = (idx: number) => {
-      // This is handled through the quiz state
-    };
     const q = questions[currentQuestionIndex];
     const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
     const timeDisplay = `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')}`;
@@ -390,7 +379,6 @@ export default function Home() {
                     if (e.key === 'Enter') {
                       if (currentQuestionIndex < questions.length - 1) {
                         updateAnswer(currentQuestionIndex + 1, '');
-                        setCurrentQuestionIndex(currentQuestionIndex + 1);
                       } else {
                         handleSubmit();
                       }
@@ -416,8 +404,8 @@ export default function Home() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => {
-                      // Navigate to previous question
-                    }}
+                        updateAnswer(currentQuestionIndex - 1, answers.get(currentQuestionIndex - 1) || '');
+                      }}
                       className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-all"
                     >
                       上一題
@@ -474,7 +462,6 @@ export default function Home() {
                   resetQuiz();
                   setSelectedCount(null);
                   setQuizMode(null);
-                  setShowQuestionCount(true);
                 }}
                 className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-all"
               >
